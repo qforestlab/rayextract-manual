@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def read_raycloud_treefile(path):
-    ''' Function to read a treefile.txt (=QSM), which is the output from using raycloudtools 'rayextract forest pointcloud.ply' 
+    ''' Function to read a treefile.txt (=QSM), which is the output from using raycloudtools 'rayextract trees pointcloud.ply' 
         Assumes a single tree on the third line of the txt file.
 
         Args:
