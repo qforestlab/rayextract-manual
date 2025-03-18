@@ -113,17 +113,17 @@ python treefile2volume.py <directory_with_treefile(s)> <output_volume.csv>
 
 It assumes a file `filename_raycloud_trees.txt` in the specified directory.
 
-### Loop over all files in a directory
-
-You can use the bash script loop_directory, which loops over all files in a directory and executes a certain command. For example, to convert all indivdual trees to tree meshes:
-
-```
-bash ./loop_directory.sh <your_directory> treemesh
-```
-
 ### Visualise treefile
 
 You can use the functions in `visualise_treefile.py`
+
+### Run rayextract for single tree point clouds
+
+You can use the bash script `rayextract_single_trees.sh` to loop over single tree point clouds in a directory (.ply format) and run rayimport -> rayextract terrain -> rayextract trees on each tree:
+
+```
+bash rayexctract_single_trees.sh <path_to_directory>
+```
 
 ### Convert treefile to TreeQSM format
 
@@ -138,6 +138,15 @@ python scripts/separate_instances.py -i <input_name>_raycloud_segmented.ply
     - (optional) -o/--odir: output directory to write separate instances to, defaults to <directory of input>/trees
     - (optional) -p/--prefix: prefix to give tree names, defaults to “tree”
 ```
+
+### Loop over all files in a directory
+
+You can use the bash script loop_directory, which loops over all files in a directory and executes a certain command. For example, to convert all indivdual trees to tree meshes:
+
+```
+bash ./loop_directory.sh <your_directory> treemesh
+```
+
 ## Install From Source (alternative to docker)
 
 If you want an alternative to docker, or a static image of raycloudtools locally, you can install from source with the following instructions:
