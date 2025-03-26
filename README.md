@@ -1,75 +1,90 @@
 # Rayextract manual
 Repository with explanation and additional functionality for using [Raycloudtools](https://github.com/csiro-robotics/raycloudtools) for forest point cloud processing
 
-## Installation
+## Installation using Docker
 
-## Via Docker
+See below for a [source install](#install-from-source-alternative-to-docker).
 
-The easiest ways to use Raycloudtools is via using [Docker](https://www.docker.com/). Docker is a software that makes a 'closed of' environment on your computer that contains an operating system (OS) and all required packages for a certain applications. Once you have Docker installed, you can just use/download the pre-made Docker 'image', start the image (a running image is called a 'container') and you're good to go. As the Docker image contains an OS, it works on both Linux and Windows.
+The easiest ways to use Raycloudtools is via using [Docker](https://www.docker.com/). Docker is a software that makes a 'closed of' environment on your computer that contains an operating system (OS) and all required packages for a certain applications. Once you have Docker installed, you can just use/download the pre-made Docker 'image', start the image (a running image is called a 'container') and you're good to go. As the Docker image contains an OS (Ubuntu most often), it works on both Linux and Windows.
 
 1. Install Docker
 2. Download the latest raycloudtools docker image:
 
-```
-docker pull ghcr.io/csiro-robotics/raycloudtools:latest
-```
+   ```
+   docker pull ghcr.io/csiro-robotics/raycloudtools:latest
+   ```
 
-You can check the available docker images on you computer with the command ```docker images```
+   Here `ghcr.io/csiro-robotics/raycloudtools:latest` is the name of the image that we're downloading ('pulling'), provided by the developers of raycloudtools. You can check the available docker images on you computer with the command ```docker images```.
 
 3. Run the container:
 
-On linux
-```
-docker run -it --name raycloudtools -v /home/yourusername:/workspace ghcr.io/csiro-robotics/raycloudtools:latest /bin/bash
-```
-You might have to use `sudo` before the command for root permissions.
-You can check running docker containers with the command `docker container list`
+   ```
+   docker run -it --rm --name raycloudtools -v /path/to/datafolder_locally:/path/to/datafolder_container ghcr.io/csiro-robotics/raycloudtools:latest /bin/bash
+   ```
+   (On linux, you might have to use `sudo` before the command for root permissions)
 
-On Windows
-```
-docker run -it --name raycloudtools -v C:/Users/YourUsername:/workspace ghcr.io/csiro-robotics/raycloudtools:latest /bin/bash
-```
+   - The `-it` flag is used to run the container in interactive mode (create an interactive bash shell inside the container)
+   - The `--rm` flag is used to automatically remove the container after usage (i.e., after exiting the bash terminal inside the container).
+   - We use `--name raycloudtools` to give the name 'raycloudtools' to the running container
+   - Normally, all files are packaged within the docker container and hence you don't have access to the filesystem on your computer from within the container. Therefore, we use `-v /path/to/folder_locally:/path/to/folder_container` to map a folder on your pc to a folder inside the container. You will then have access to this folder from within the container (but only to the mapped folder and subfolders!). Usually, you just need access to your datafiles that you want to process with rayextract, so the specified folder can be the one containing all your data. You have to replace `/path/to/folder_locally` with the absolute path to your datafolder on your pc, and `/path/to/folder_container` with the absolute path inside the docker container. Since the container is running linux, the path is specified with forward slashes ('/'), starting from the 'root' (first '/'). The provided raycloudtools docker image has by default a folder called `/workspace`, which is the entry point when running the container. Therefore, for example, you can map your datafolder as follows 
+   
+      Windows: `C:/Users/YourUsername/.../projectname/data:/workspace/data`
 
-Replace /home/yourusername or C:/Users/YourUsername with the path to your home directory. As all files are normally packaged within the docker container, to communicate with the filesystem outside the container, we use the -v flag to map the filesystem in the container to the filesystem on your computer. The first part before the ':' is the directory on your own computer, that you want to map to the directory in the container (after the ':').  
+      Linux: `/home/username/.../projectname/data:/workspace/data`
+
+      WSL: `/mnt/c/Users/username/.../projectname/data:/workspace/data`
+
+      Make sure you put your path in between quotation marks (") if it contains spaces!
+
+
+
+If all went well you now have access to a bash terminal inside the container:
 
 ![](./img/docker_run_snip.PNG)
 
-You now have access to a bash terminal inside the container. Here you can run all the commands described in the next section. To exit the docker container you can press CTRL+d.
+ Inside this linux terminal you can use all the regular linux commands. For example, use `cd data` ('change directory'), to navigate into the data folder. You can use the `ls` command to list all the files/foldes inside the current folder. Now, you can run all the commands described in the next section. 
+ 
+ To exit the docker container you can press CTRL+d. You will have to restart the container each time you want to use it (step 3), but no need to download the docker image again (only if there are updates made by the rayextract team).
 
 
 ## Usage
 
-It is assumed that you have a forest plot or tree point cloud in '.ply' format. Just XYZ is enough. 
+It is assumed that you have a forest plot or tree point cloud in '.ply' or '.las(z)' format. Just XYZ is enough. 
 
 ### Convert pointcloud to raycloud
 
-Raycloudtools expects a '.ply' file with in the normal fields the scanner location (note that for the Rayextract tools useful for forest point cloud processing these are not actually used). The `rayimport` command can add these (empty) fields to your input ply file: 
+The Raycloudtools library normally expects as input a '.ply' file with in the normal fields the scanner location. However, for the Rayextract tools useful for forest point cloud processing these are not actually used. Nonetheless, the normal fields must be there in order for the tool to work. The `rayimport` command can add these (empty) fields to your input file: 
 
 ```
 rayimport your_pointcloud.ply ray 0,0,-1 --max_intensity 0 --remove_start_pos; 
 ```
 
-Note that we subtract the start position of the pointcloud, to start at 0,0,0.
+Here, a constant vector of [0,0,-1] is added as scanner location in the normal field for all points. Note that we subtract the start position of the pointcloud (`--remove_start_pos`), to start at 0,0,0. This is optional, but recommended if your pointcloud has large values (potential precision overflow errors).
 
-The output is a file called 'your_pointcloud_raycloud.ply' in the same directory. 
+The output is a file called `your_pointcloud_raycloud.ply` in the same directory. 
 
 ### Extract terrain mesh
+
+The first step is to extract the terrain mesh from the pointcloud: 
 
 ```
 rayextract terrain your_pointcloud_raycloud.ply
 ```
 
-The output is a file 'your_pointcloud_raycloud_mesh.ply', which is a terrain mesh file.
+The output is a file `your_pointcloud_raycloud_mesh.ply`, which is a terrain mesh file.
 
 ### Extract trees
 
-To extract the trees we give as input the pointcloud (your_pointcloud_raycloud.ply) and the extracted terrain mesh (your_pointcloud_raycloud_mesh.ply). The `rayextract trees` command will use the mesh as seed points and simultaniously build a shortest path graph through all the tree points, using some heuristics to guide the connectivity. Hence, it combines the tree instance segmentation step and the cylinder fitting (i.e., QSM) building step.   
+To extract the trees we give as input the pointcloud (`your_pointcloud_raycloud.ply`) and the extracted terrain mesh (`your_pointcloud_raycloud_mesh.ply`). The `rayextract trees` command will use the mesh as seed points and simultaniously build a shortest path graph through all the tree points, using some heuristics to guide the connectivity. Hence, it combines the tree instance segmentation step and the cylinder fitting (i.e., QSM) building step.   
 
 ```
 rayextract trees your_pointcloud_raycloud.ply your_pointcloud_raycloud_mesh.ply
 ```
 
-The output is (1) a your_pointcloud_raycloud_trees.txt file (called 'treefile'), which contains the cylinder models of all the extracted trees (one line per tree), (2) a your_pointcloud_raycloud_segmented.ply file, which is the original pointcloud with unique color for each extracted tree, and (3) a your_pointcloud_raycloud_trees_mesh.ply file, which contains all tree stems as meshes. 
+The output is:
+1) `your_pointcloud_raycloud_trees.txt` file (called 'treefile'), which contains the cylinder models of all the extracted trees (one line per tree)
+2) `your_pointcloud_raycloud_segmented.ply` file, which is the original pointcloud with unique color for each extracted tree
+3) a `your_pointcloud_raycloud_trees_mesh.ply` file, which contains all tree stems as meshes. 
 
 The format of the treefile is explained in more detail in the [treetools](https://github.com/csiro-robotics/treetools) library, which contains functionality for working with treefiles. The treefiles library is also already installed in the docker image. Below are some examples of commands you can run.
 
@@ -97,7 +112,7 @@ For large point clouds where Rayextract may crash because of memory limitations,
 
 For example:
 ```
-bash <path_to_file>/rayextract_trees_large.sh cloudname 20
+bash <path_to_file>/rayextract_trees_large.sh your_pointcloud_raycloud 20
 ```
 To use tiles of 20x20m. We recommend increasing the default buffer size of 5m in the script a bit (depending on the max width of the trees).
 
@@ -124,6 +139,8 @@ You can use the bash script `rayextract_single_trees.sh` to loop over single tre
 ```
 bash rayexctract_single_trees.sh <path_to_directory>
 ```
+
+Alternatively, have a look at the `batch_<command>.sh` scripts. For converting pointclouds in .txt format to .ply format, you can use the `txt2ply.py` python script.
 
 ### Convert treefile to TreeQSM format
 
@@ -230,33 +247,4 @@ If you want an alternative to docker, or a static image of raycloudtools locally
    ```
    These three lines allow you to call tools from both packages in any directory (important for batching scripts), and paths them to required lib files.
    **Restart your console for this step to take effect**
-   
-4. Set up batching in the /raycloudtools directory
-
-   a. Create a directory for individual tree processing
-   ```
-   mkdir trees
-   ```
-   b. Place the following batch scripts in /raycloudtools (scripts available in this repo)<br />
-   Original credit for .sh scripts to Tom Verhelst, and txt2ply.py to Wouter Van den Broeck
-   <br />
-   batch_run_raycloudQSMs.sh<br />
-   batch_rayimport.sh<br />
-   batch_rayextract_terrain.sh<br />
-   batch_rayextract_trees.sh<br />
-   batch_tree_info.sh<br />
-   txt2ply.py<br />
-   <br />
-5. Run test<br />
-   Place one individual point cloud .txt file in /raycloudtools/trees, and run the following:
-   ```
-   bash batch_run_raycloudQSMs.sh
-   ```
-   If successful, you should have a print that looks like the following:
-   ![](./img/rct_source_install_qsm_processing_print.PNG)
-   Additionally, you should have files similar to the following in /trees:
-   ![](./img/rct_qsm_output_files.PNG)
-
-6. Setup complete, for QSM creation, place trees in /trees directory and run `bash batch_run_raycloudQSMs.sh`<br />
-
    
