@@ -39,7 +39,7 @@ def main():
 
     args = parser.parse_args()
 
-    pc = o3d.io.read_point_cloud(args.input)
+    pc = o3d.t.io.read_point_cloud(args.input)
 
     if args.odir is None:
         # write at location of pc
