@@ -94,10 +94,16 @@ Get more info for all trees:
 treeinfo treefile.txt 
 ```
 
-Split into separate file for each tree:
+Split treefile with all trees into separate file for each tree:
 
 ```
 treesplit treefile.txt per-tree
+```
+
+You will probably want to use this in combination with splitting the segmented pointcloud into individual trees (the subscript should match the one of the splitted treefile):
+
+```
+raysplit pointcloud_raycloud_segmented.ply seg_colour
 ```
 
 Convert to mesh file:
@@ -145,16 +151,6 @@ Alternatively, have a look at the `batch_<command>.sh` scripts. For converting p
 ### Convert treefile to TreeQSM format
 
 You can use the functions in `treefile2treeQSM.py`
-
-### Separate instances
-
-You can use the script `separate_instances.py` to separate the pointcloud_raycloud_segmented.ply output into individual trees: 
-
-```
-python scripts/separate_instances.py -i <input_name>_raycloud_segmented.ply
-    - (optional) -o/--odir: output directory to write separate instances to, defaults to <directory of input>/trees
-    - (optional) -p/--prefix: prefix to give tree names, defaults to “tree”
-```
 
 ### Loop over all files in a directory
 
