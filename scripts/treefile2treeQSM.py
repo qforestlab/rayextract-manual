@@ -1,6 +1,9 @@
 from scipy.io import loadmat, savemat
 import numpy as np
 import pandas as pd
+import os
+import argparse
+from pathlib import Path
 
 
 def read_raycloud_treefile(path):
@@ -93,26 +96,20 @@ def treefile_to_treeqsm(path_in, path_out):
     savemat(path_out, {'qsm': cyl})
 
 
-def read_qsm_mat(path):
-    # Read matlab .mat file
-    file = loadmat(path)
-    # Get QSM components
-    cylinder = file['qsm'][0, 0][0][0]
-    branch = file['qsm'][0, 0][1][0]
-    treedata = file['qsm'][0, 0][2][0]
-    rundata = file['qsm'][0, 0][3][0] 
-    pmdistance = file['qsm'][0, 0][4][0] 
-    return {
-        'cylinder': {
-            'start': cylinder['start'][0],
-            'axis': cylinder['axis'][0],
-            'length': cylinder['length'][0],
-            'parent': cylinder['parent'][0],
-            'branch': cylinder['branch'][0],
-            'radius': cylinder['radius'][0],
-        },
-        'branch': branch,
-        'treedata': treedata,
-        'rundata': rundata,
-        'pmdistance': pmdistance,
-    }
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Convert treefiles to matlab QSMs")
+    parser.add_argument("dir_treefile", help="Directory containing treefiles")
+    parser.add_argument("dir_qsm", help="Directory to save matlab qsms")
+    args = parser.parse_args()
+
+    dir_treefile = Path(args.dir_treefile)
+    dir_qsm = Path(args.dir_qsm)
+    dir_qsm.mkdir(parents=True, exist_ok=True)
+
+    treefiles = os.listdir(args.dir_treefile)
+
+    # Loop over all treefiles and convert to matlab qsm
+    for treefile in treefiles:
+        path_in = dir_treefile / treefile
+        path_out = (dir_qsm / treefile).with_suffix('.mat')
+        treefile_to_treeqsm(path_in, path_out)
