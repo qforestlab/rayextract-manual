@@ -40,8 +40,8 @@ for ply_file in "$INPUT_DIR"/*.ply; do
     raycloud_file="$RAYCLOUD_DIR/${base_name}_raycloud.ply"
     mesh_file="$MESH_DIR/${base_name}_raycloud_mesh.ply"
     trees_file="$TREES_DIR/${base_name}_raycloud_trees_mesh.ply"
-    trees_segm_file="$TREES_QSM_DIR/${base_name}_raycloud_segmented.ply"
-    trees_qsm_file="$TREES_SEGM_DIR/${base_name}_raycloud_trees.txt"
+    trees_segm_file="$TREES_SEGM_DIR/${base_name}_raycloud_segmented.ply"
+    trees_qsm_file="$TREES_QSM_DIR/${base_name}_raycloud_trees.txt"
     
     # Run rayimport only if the raycloud file does not already exist
     if [ ! -f "$raycloud_file" ]; then
