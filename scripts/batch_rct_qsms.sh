@@ -1,7 +1,7 @@
 #!/bin/bash
-rm trees/*_raycloud*
+rm trees/rayclouds/*_raycloud*
 
-echo "Converting all trees in directory to ply via txtlaslaz2ply.py..."
+echo "Converting all files in trees directory to ply via file2ply.py..."
 python file2ply.py trees trees
 
 cd trees
@@ -11,7 +11,7 @@ for file in ./*.ply; do
   if [ -f "$file" ]; then
     echo "Processing $file"
     # Add your commands here
-    rayimport "$file" 0,0,-1 --max_intensity 0 --remove_start_pos
+    rayimport "$file" 0,0,-1 --max_intensity 0
   fi
 done
 
@@ -41,7 +41,7 @@ for data_file in ./rayclouds/*_raycloud.ply; do
   # Find the corresponding mesh file
   mesh_file="./terrain_meshs/${base_name}_raycloud_mesh.ply"
   
-  rayextract trees "$data_file" "$mesh_file" --max_diameter 2 --distance_limit 9
+  rayextract trees "$data_file" "$mesh_file" --max_diameter 0.9 --distance_limit 1 --height_min 2
 #  if [ -f "$mesh_file" ]; then
 #    echo "Processing $data_file with $mesh_file"
 #    # Replace the following line with your actual command
@@ -61,7 +61,7 @@ rm -r segmented_pcs
 mkdir segmented_pcs
 mv ./rayclouds/*_segmented.ply ./segmented_pcs
 
-echo "Running batch_tree_info.sh"
+echo "Using treetools to extract trees_info"
 for file in ./qsms/*trees.txt; do
   if [ -f "$file" ]; then
     echo "Processing $file"
