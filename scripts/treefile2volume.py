@@ -23,7 +23,7 @@ def calculate_volume(tree_cylinders):
         r0 = radius[j]
         r1 = radius[i]
         l = np.sqrt(np.sum(v**2))
-        segment_volume[i-1] = np.pi * l / 3 * (r0**2 + r0*r1 + r1**2)
+        segment_volume[i-1] = np.pi * l * r1**2
 
     volume = np.sum(segment_volume)
     return volume
