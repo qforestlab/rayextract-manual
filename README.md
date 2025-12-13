@@ -145,6 +145,7 @@ The parameters of most interest to us are:
 - `--crop_length` (default `1.0`): by default the cylinder graph will be build up to one meter from the end of the point cloud. Decreasing this value (minimum is 0.1m) will result in more small branches at the extremities (see for example image below).
 
    <img src="./img/crop_length_example.png" alt="" width="400"/>
+
    For volume calculations, you can keep the default value as most tree volume is located in the main stem and branches. However, for tree reconstruction for radiative transfer simulations it can be important to decrease this value! Keep in mind that generating more small branches will exponentially increase the file size.
 - `--height_min` (default `2`): minimum height counted as a tree. Note, this is calculated as the tree length and not the vertical height (e.g. fallen trees can potentially also be identified).
 - `--global_taper`, `--global_taper_factor`, `--gravity_factor`: you can play around with these to change the tapering vertical preference for trees.
@@ -231,11 +232,12 @@ The output will be a new directory (`<directory>_raycloud`) with five subdirecto
 4. `trees_QSM_files`: *treefiles* (=QSMs) outputted by `rayextract trees`
 5. `trees_segmented_files`: segmented tree point clouds outputted by `rayextract trees`
 
-> :important: Since `rayextract trees` is made to operate on forest plot point clouds, it is possible that when running it on a single tree point cloud it can segment it into multiple instances. At the moment, there is unfortunatelly no option to let rayextract know that you're inputting a single tree. You should therefore check in the output that there is only a single line in the *_trees.txt* or that there is only a single color in the *_segmented.ply* files.  
-> 
-> Cases where rayextract may segment your individual tree point cloud into multiple instances:
-> - Stem base points are noisy: the extracted terrain mesh may be very steep and large, hence reaching higher branches. Potential fix: (1) manually clean your base stem points, (2) use a plot level terrain mesh if available, (3) change the `--gradient` parameter in `rayextract terrain` to a lower value.
-> - Low hanging branches: these may be detected as seed points to build seperate trees. Potential fix: (1) partially remove these low branches (e.g. in CloudCompare), or (2) crop the terrain mesh to only cover the main stem. 
+
+**Important:** Since `rayextract trees` is made to operate on forest plot point clouds, it is possible that when running it on a single tree point cloud it can segment it into multiple instances. At the moment, there is unfortunatelly no option to let rayextract know that you're inputting a single tree. You should therefore check in the output that there is only a single line in the *_trees.txt* or that there is only a single color in the *_segmented.ply* files.  
+
+Cases where rayextract may segment your individual tree point cloud into multiple instances:
+- Stem base points are noisy: the extracted terrain mesh may be very steep and large, hence extending to higher branches. Potential fix: (1) manually clean your base stem points, (2) use a plot level terrain mesh if available, (3) change the `--gradient` parameter in `rayextract terrain` to a lower value.
+- Low hanging branches: these may be detected as seed points to build seperate trees. Potential fix: (1) partially remove these low branches (e.g. in CloudCompare), or (2) crop the terrain mesh to only cover the main stem. 
 
 
 ### Virtual forest reconstruction
