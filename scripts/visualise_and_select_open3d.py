@@ -24,31 +24,27 @@ class Selection:
         self.df_path = df_path
         self.df = pd.read_csv(df_path)
         self.treefile = treefile
-        if mode == 'keep':
-            self.select_fn = self._keep
-        elif mode == 'reject':
-            self.select_fn = self._reject
-        elif mode == 'maybe':
-            self.select_fn = self._maybe
+        if mode == 'understory':
+            self.select_fn = self._understory
+        elif mode == 'tree':
+            self.select_fn = self._tree
         elif mode == 'snag':
             self.select_fn = self._snag
+        elif mode == 'fix':
+            self.select_fn = self._fix
+        elif mode == 'reject':
+            self.select_fn = self._reject
          
-    def _keep(self, vis):
-        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'keep'
+    def _understory(self, vis):
+        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'understory'
         self.df.to_csv(self.df_path, index=False)
-        print(self.treefile, '--> keep')
+        print(self.treefile, '--> understory')
         return False
         
-    def _reject(self, vis):
-        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'reject'
+    def _tree(self, vis):
+        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'tree'
         self.df.to_csv(self.df_path, index=False)
-        print(self.treefile, '--> reject')
-        return False
-
-    def _maybe(self, vis):
-        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'maybe'
-        self.df.to_csv(self.df_path, index=False)
-        print(self.treefile, '--> maybe')
+        print(self.treefile, '--> tree')
         return False
     
     def _snag(self, vis):
@@ -57,44 +53,73 @@ class Selection:
         print(self.treefile, '--> snag')
         return False
     
+    def _fix(self, vis):
+        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'fix'
+        self.df.to_csv(self.df_path, index=False)
+        print(self.treefile, '--> fix')
+        return False
+    
+    def _reject(self, vis):
+        self.df.loc[self.df['filename'] == self.treefile, 'selection'] = 'reject'
+        self.df.to_csv(self.df_path, index=False)
+        print(self.treefile, '--> reject')
+        return False
+    
     def __call__(self, vis):
         self.select_fn(vis)
 
 
 
-def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path):
+def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undecided', bounds=None, diam_min=None):
     # Read treefiles dataframe
     df = pd.read_csv(treefiles_df_path)
 
-    # filter treefiles on location and minimum diameter
-    x_min, x_max = 15, 55
-    y_min, y_max = 15, 55
-    d_min = 0.1
+    # Select only trees according to criterium
+    df_filtered = df[(df['selection'] == selection)]
 
-    tf_filtered = df[
-        (df['x'] > x_min) & 
-        (df['x'] < x_max) & 
-        (df['y'] > y_min) & 
-        (df['y'] < y_max) & 
-        (df['d'] > d_min) &
-        (df['selection'] == 'undecided')
-    ]
+    # Filter on location
+    if bounds:
+        x_min, x_max, y_min, y_max = bounds
+        df_filtered = df_filtered[
+            (df_filtered['x'] > x_min) & 
+            (df_filtered['x'] < x_max) & 
+            (df_filtered['y'] > y_min) & 
+            (df_filtered['y'] < y_max)            
+        ]
 
-    print('number of trees to go:', tf_filtered.shape[0])
+    # Filter on minimum diameter
+    if diam_min:
+        df_filtered = df_filtered[(df_filtered['d'] > diam_min)]
+
+    print('number of trees to go:', df_filtered.shape[0])
 
     # Loop over all treefiles
-    for treefile in tf_filtered['filename'].values:
+    for _, df_row in df_filtered.iterrows():
+        treefile = df_row['filename']
 
         # Get corresponding pointcloud and mesh file
-        pc_file = treefile.replace('trees', 'segmented').replace('txt', 'ply')
+        if 'treefiles' in treefile:
+            pc_file = treefile.replace('treefiles', 'segmented').replace('txt', 'ply')
+        elif 'treefile' in treefile:
+            pc_file = treefile.replace('treefile', 'segmented').replace('txt', 'ply')
+        
         mesh_file = treefile.replace('.txt', '_mesh.ply')
 
-        # Read point cloud and mesh
-        print(f'reading {dir_pc + pc_file}')
-        pcd = o3d.io.read_point_cloud(dir_pc + pc_file)
-        print(f'reading {dir_mesh + mesh_file}')
-        mesh = o3d.io.read_triangle_mesh(dir_mesh + mesh_file)
-        mesh.compute_vertex_normals()
+        # Read point cloud
+        if os.path.exists(os.path.join(dir_pc, pc_file)):
+            print(f'reading pointcloud:{os.path.join(dir_pc, pc_file)}')
+            pcd = o3d.io.read_point_cloud(os.path.join(dir_pc, pc_file))
+        else:
+            raise ValueError(f'pointcloud {os.path.join(dir_pc, pc_file)} does not exist')
+        
+        # Read mesh
+        if os.path.exists(os.path.join(dir_mesh, mesh_file)):
+            print(f'reading mesh:{os.path.join(dir_mesh, mesh_file)}')
+            mesh = o3d.io.read_triangle_mesh(os.path.join(dir_mesh, mesh_file))
+            mesh.compute_vertex_normals()
+        else:
+            mesh = o3d.geometry.TriangleMesh()
+            Warning(f'mesh {os.path.join(dir_mesh, mesh_file)} does not exist')     
 
         # Compute height of the point cloud
         points = np.asarray(pcd.points)
@@ -102,6 +127,7 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path):
         width_x = points[:, 0].max() - points[:, 0].min()
         width_y = points[:, 1].max() - points[:, 1].min()
         print(f"Height of point cloud: {height:.2f} m")
+        print(f"diameter: {df_row['d']:.2f} m")
 
         # Print potential current selection state
         print('current decision:', df[df['filename'] == treefile]['selection'].values[0])
@@ -132,18 +158,20 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path):
         # Define callback functions
         toggle_pcd = Toggle(pcd)
         toggle_mesh = Toggle(mesh)
-        keep = Selection(treefiles_df_path, treefile, mode='keep')
-        reject = Selection(treefiles_df_path, treefile, mode='reject')
-        maybe = Selection(treefiles_df_path, treefile, mode='maybe')
+        understory = Selection(treefiles_df_path, treefile, mode='understory')
+        tree = Selection(treefiles_df_path, treefile, mode='tree')
         snag = Selection(treefiles_df_path, treefile, mode='snag')
+        fix = Selection(treefiles_df_path, treefile, mode='fix')
+        reject = Selection(treefiles_df_path, treefile, mode='reject')
 
         # Register key callbacks
-        vis.register_key_callback(ord("["), toggle_pcd) # --> press '1' to toggle point cloud
+        vis.register_key_callback(ord("["), toggle_pcd) # --> press '[' to toggle point cloud
         vis.register_key_callback(ord("]"), toggle_mesh)
-        vis.register_key_callback(ord("K"), keep) # --> press 'k' to set selection column in csv file to 'keep' for that treefile 
-        vis.register_key_callback(ord("R"), reject)
-        vis.register_key_callback(ord("M"), maybe)
+        vis.register_key_callback(ord("U"), understory) # --> press 'u' to set selection column in csv file to 'understory' for that treefile 
+        vis.register_key_callback(ord("T"), tree)
         vis.register_key_callback(ord("S"), snag)
+        vis.register_key_callback(ord("F"), fix)
+        vis.register_key_callback(ord("R"), reject)
 
         # Run the visualizer
         vis.run()
@@ -158,10 +186,17 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path):
 if __name__ == "__main__":
 
     # Path to tree pointclouds and treefiles 
-    dir_pc = '/Stor1/wouter/data/chile/FUR002/rayextract/trees_pointclouds/'
-    dir_tf = '/Stor1/wouter/data/chile/FUR002/rayextract/trees_treefiles/'
-    dir_mesh = '/Stor1/wouter/data/chile/FUR002/rayextract/trees_meshes/'
+    dir_pc = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_pointclouds/'
+    dir_tf = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_treefiles/'
+    dir_mesh = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_meshes/'
     treefiles_dataframe = '/Stor1/wouter/data/chile/FUR002/rayextract/treefiles_dataframe.csv'
 
-    visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_dataframe)
+    bounds = (10, 60, 10, 60)
+    d_min = 0.0
+    selection = 'undecided'  # 'undecided', 'fix', 'reject', 'tree', 'understory', 'snag'
+
+    # df = pd.read_csv(treefiles_dataframe)
+    # print('tree indices to fix:', df.loc[df['selection'] == 'fix', 'id'].values)
+
+    visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_dataframe, selection=selection, bounds=bounds, diam_min=d_min)
 
