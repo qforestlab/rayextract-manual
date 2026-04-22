@@ -216,13 +216,13 @@ You can also have a look at the [rayextract_tiled_individual_trees.sh](./scripts
 
 ## RCT for individual tree point clouds
 
-While RCT is made to work for forest plot point clouds, it can also be applied to single tree point clouds. You can use the bash script [rayextract_single_trees.sh](./scripts/rayextract_single_tree.sh) in this repository to loop over single tree point clouds in a directory (.ply format) and run `rayimport` -> `rayextract terrain` -> `rayextract trees` on each tree:
+While RCT is made to work for forest plot point clouds, it can also be applied to single tree point clouds. You can use the bash script [rayextract_single_trees.sh](./scripts/rayextract_single_trees.sh) in this repository to loop over single tree point clouds in a directory (.ply format) and run `rayimport` -> `rayextract terrain` -> `rayextract trees` on each tree:
 
 ```
 bash <rayextract_single_trees.sh> <directory>
 ```
 
-- `<rayextract_single_trees.sh>`: replace with path to the [rayextract_single_trees.sh](./scripts/rayextract_single_tree.sh) script
+- `<rayextract_single_trees.sh>`: replace with path to the [rayextract_single_trees.sh](./scripts/rayextract_single_trees.sh) script
 - `<directory>`: replace with path to the directory with individual tree point clouds (expects ply files) 
 
 The output will be a new directory (`<directory>_raycloud`) with five subdirectories:
@@ -247,7 +247,7 @@ As explained in the [rayextract trees](#rayextract-trees-extract-individual-tree
 ```
 bash <rayextract_single_trees_vf.sh> <directory>
 ```
-- `<rayextract_single_trees_vf.sh>`: replace with path to the [rayextract_single_trees_vf.sh](./scripts/rayextract_single_tree_vf.sh) script.
+- `<rayextract_single_trees_vf.sh>`: replace with path to the [rayextract_single_tree_vf.sh](./scripts/rayextract_single_tree_vf.sh) script.
 - `<directory>`: replace with path to directory with single tree point clouds (ply files)
 
 The output is similar as [above](#rct-for-individual-tree-point-clouds).
