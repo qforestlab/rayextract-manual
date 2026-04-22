@@ -185,7 +185,7 @@ treemesh <pcd_raycloud_trees_X.txt>
 ```
 - `<pcd_raycloud_trees_X.txt>`: replace with your treefile
 
-This will output the file `pcd_raycloud_trees_X_mesh.txt`. 
+This will output the file `pcd_raycloud_trees_X_mesh.ply`. 
 
 If you want to convert all the treefiles in a directory to meshes you can use the bash script [`loop_directory.sh`](./scripts/loop_directory.sh) in this repository to loop over a directory and apply the command to each file:
 
