@@ -225,9 +225,9 @@ bash <rayextract_single_trees.sh> <directory>
 - `<rayextract_single_trees.sh>`: replace with path to the [rayextract_single_trees.sh](./scripts/rayextract_single_trees.sh) script
 - `<directory>`: replace with path to the directory with individual tree point clouds (expects ply files) 
 
-The output will be a new directory (`<directory>_raycloud`) with five subdirectories:
+The output will be a new directory (`<directory>_rayextract`) with five subdirectories:
 1. `raycloud_files`: point cloud files in RCT format outputted by `rayimport`
-2. `terrain_mesh_files`: terrain mesh files outputted by `rayextract terrain`
+2. `ground_mesh_files`: terrain mesh files outputted by `rayextract terrain`
 3. `trees_mesh_files`: tree triangular meshes outputted by `rayextract trees`
 4. `trees_QSM_files`: *treefiles* (=QSMs) outputted by `rayextract trees`
 5. `trees_segmented_files`: segmented tree point clouds outputted by `rayextract trees`
