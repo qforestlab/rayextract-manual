@@ -305,7 +305,24 @@ The output is a csv file with columns [*filename, id, x, y, z, d, selection*]. T
 
 [TODO] Next, we can visualize the individual tree point cloud overlayed with its triangular mesh. You can for example do this using the [visualise_and_select_open3d.py](./scripts/visualise_and_select_open3d.py) script. This script uses the *open3d* package to loop over all trees, visualize the point cloud and mesh and use hot keys to set a selection status for the tree. 
 
-> If you directly want to visualise the *treefile* (i.e. QSM) instead of the triangulated mesh, you can for example use the function in the [visualise_treefile.py](./scripts/visualise_treefile.py) file.
+> ### Hot keys on QWERTY keyboard
+> `[` Toggle point cloud
+> 
+>  `]` Toggle mesh
+> 
+> `u` Set selection column in csv file to 'understory' for that treefile
+> 
+> `t` Set selection column in csv file to 'tree' for that treefile
+> 
+> `s` Set selection column in csv file to 'snag' for that treefile
+> 
+> `f` Set selection column in csv file to 'fix' for that treefile
+> 
+> `r` Set selection column in csv file to 'reject' for that treefile
+>
 
-Once you are finished with quality control for all trees, you can copy a selection of the trees to a new directory with the script
+
+If you directly want to visualise the *treefile* (i.e. QSM) instead of the triangulated mesh, you can for example use the function in the [visualise_treefile.py](./scripts/visualise_treefile.py) file.
+
+Once you are finished with quality control for all trees, you can copy the selected trees to a new directory with the script
 [copy_selected_trees.py](./scripts/copy_selected_trees.py).
