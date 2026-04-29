@@ -292,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--selection", default="fix")
     parser.add_argument("--bounds", nargs=4, type=float, default=None)
     parser.add_argument("--diam-min", type=float, default=None)
-    parser.add_argument("--no-smooth", action="store_true")
+    parser.add_argument("--smooth", action="store_true") # when --smoooth is added as an arg it will become true and if loop will happen in function
 
     # Editable arguments to fix qsm's
     parser.add_argument("--gradient", type=float, default=0.2)
@@ -323,6 +323,6 @@ if __name__ == "__main__":
         selection=args.selection,
         bounds=args.bounds,
         diam_min=args.diam_min,
-        smooth_tree=not args.no_smooth,
+        smooth_tree= args.smooth,
         params=params,
     )
