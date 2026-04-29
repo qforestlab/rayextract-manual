@@ -12,6 +12,27 @@ import os
 import subprocess
 import shutil
 
+#function to find matching parts in filename, so it works for any filename structure
+def find_matching_file(directory, tree_id, required_parts=None, extension=None):
+    required_parts = required_parts or []
+
+    matches = []
+    for filename in os.listdir(directory):
+        if extension is not None and not filename.endswith(extension):
+            continue
+        if not filename.startswith(tree_id):
+            continue
+        if all(part in filename for part in required_parts):
+            matches.append(filename)
+
+    if len(matches) == 0:
+        raise FileNotFoundError(f"No file found in {directory} for tree_id={tree_id}, required_parts={required_parts}")
+
+    if len(matches) > 1:
+        raise ValueError(f"Multiple files found in {directory} for tree_id={tree_id}, required_parts={required_parts}: {matches}")
+
+    return matches[0]
+
 def read_rayextract_treefile(path):
     """Read a rayextract treefile.
 
@@ -132,15 +153,14 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
     # Loop over all treefiles
     for _, df_row in df_filtered.iterrows():
         treefile = df_row['filename']
-        treefile_path = os.path.join(dir_treefile, treefile)
+        tree_id = df_row['id']
 
-        # Get corresponding pointcloud and mesh file
-        if 'treefiles' in treefile:
-            pc_file = treefile.replace('treefiles', 'segmented').replace('txt', 'ply')
-        elif 'treefile' in treefile:
-            pc_file = treefile.replace('treefile', 'segmented').replace('txt', 'ply')
+        pc_file = find_matching_file(dir_pc, tree_id, required_parts=["segmented"], extension=".ply")
+        mesh_file = find_matching_file(dir_mesh, tree_id, required_parts=["mesh"], extension=".ply")
+
         pc_path = os.path.join(dir_pc, pc_file)
-        mesh_path = os.path.join(dir_mesh, treefile.replace('.txt', '_mesh.ply'))
+        treefile_out_path = os.path.join(dir_treefile_out, treefile)
+        mesh_out_path = os.path.join(dir_mesh_out, mesh_file)
         
         # Run rayextract terrain
         if terrain_path is None:
