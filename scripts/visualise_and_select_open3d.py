@@ -138,11 +138,24 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
 
         # Compute height of the point cloud
         points = np.asarray(pcd.points)
-        height = points[:, 2].max() - points[:, 2].min()
-        width_x = points[:, 0].max() - points[:, 0].min()
-        width_y = points[:, 1].max() - points[:, 1].min()
+        p2 = points[:,2].min()
+        p1 = points[:,1].min()
+        p0 = points[:,0].min()
+        height = points[:, 2].max() - p2
+        width_x = points[:, 0].max() - p0
+        width_y = points[:, 1].max() - p1
         print(f"Height of point cloud: {height:.2f} m")
         print(f"diameter: {df_row['d']:.2f} m")
+        #Translate pcd
+        points[:,2] -= p2
+        points[:,1] -= p1
+        points[:,0] -= p0
+
+        #Translate mesh
+        vertices = np.asarray(mesh.vertices)
+        vertices[:,2] -= p2
+        vertices[:,1] -= p1
+        vertices[:,0] -= p0
 
         # Print potential current selection state
         print('current decision:', df[df['filename'] == treefile]['selection'].values[0])
