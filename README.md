@@ -185,7 +185,7 @@ treemesh <pcd_raycloud_trees_X.txt>
 ```
 - `<pcd_raycloud_trees_X.txt>`: replace with your treefile
 
-This will output the file `pcd_raycloud_trees_X_mesh.txt`. 
+This will output the file `pcd_raycloud_trees_X_mesh.ply`. 
 
 If you want to convert all the treefiles in a directory to meshes you can use the bash script [`loop_directory.sh`](./scripts/loop_directory.sh) in this repository to loop over a directory and apply the command to each file:
 
@@ -247,7 +247,7 @@ As explained in the [rayextract trees](#rayextract-trees-extract-individual-tree
 ```
 bash <rayextract_single_trees_vf.sh> <directory>
 ```
-- `<rayextract_single_trees_vf.sh>`: replace with path to the [rayextract_single_trees_vf.sh](./scripts/rayextract_single_tree_vf.sh) script.
+- `<rayextract_single_trees_vf.sh>`: replace with path to the [rayextract_single_tree_vf.sh](./scripts/rayextract_single_tree_vf.sh) script.
 - `<directory>`: replace with path to directory with single tree point clouds (ply files)
 
 The output is similar as [above](#rct-for-individual-tree-point-clouds).
