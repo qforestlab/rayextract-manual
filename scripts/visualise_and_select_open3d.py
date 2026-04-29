@@ -3,6 +3,25 @@ import numpy as np
 import pandas as pd
 import os
 
+def find_matching_file(directory, tree_id, required_parts=None, extension=".ply"):
+    required_parts = required_parts or []
+
+    matches = []
+    for filename in os.listdir(directory):
+        if not filename.endswith(extension):
+            continue
+        if not filename.startswith(tree_id):
+            continue
+        if all(part in filename for part in required_parts):
+            matches.append(filename)
+
+    if len(matches) == 0:
+        raise FileNotFoundError(f"No file found in {directory} for tree_id={tree_id}, required_parts={required_parts}")
+
+    if len(matches) > 1:
+        raise ValueError(f"Multiple files found in {directory} for tree_id={tree_id}, required_parts={required_parts}: {matches}")
+
+    return matches[0]
 
 class Toggle:
     def __init__(self, geom, visible=True):
@@ -96,14 +115,10 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
     # Loop over all treefiles
     for _, df_row in df_filtered.iterrows():
         treefile = df_row['filename']
+        tree_id = df_row['id']
 
-        # Get corresponding pointcloud and mesh file
-        if 'treefiles' in treefile:
-            pc_file = treefile.replace('treefiles', 'segmented').replace('txt', 'ply')
-        elif 'treefile' in treefile:
-            pc_file = treefile.replace('treefile', 'segmented').replace('txt', 'ply')
-        
-        mesh_file = treefile.replace('.txt', '_mesh.ply')
+        pc_file = find_matching_file(dir_pc, tree_id, required_parts=["segmented"])
+        mesh_file = find_matching_file(dir_mesh, tree_id, required_parts=["mesh"])
 
         # Read point cloud
         if os.path.exists(os.path.join(dir_pc, pc_file)):
