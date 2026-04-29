@@ -97,7 +97,7 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
     df_filtered = df[(df['selection'] == selection)]
 
     # Filter on location
-    if bounds:
+    if bounds is not None:
         x_min, x_max, y_min, y_max = bounds
         df_filtered = df_filtered[
             (df_filtered['x'] > x_min) & 
@@ -213,18 +213,17 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
 
 if __name__ == "__main__":
 
-    # Path to tree pointclouds and treefiles 
-    dir_pc = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_pointclouds/'
-    dir_tf = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_treefiles/'
-    dir_mesh = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_meshes/'
-    treefiles_dataframe = '/Stor1/wouter/data/chile/FUR002/rayextract/treefiles_dataframe.csv'
+    import argparse
+    parser = argparse.ArgumentParser(description="Visualize tree point clouds and meshes, and update tree selection labels.")
 
-    bounds = (10, 60, 10, 60)
-    d_min = 0.0
-    selection = 'undecided'  # 'undecided', 'fix', 'reject', 'tree', 'understory', 'snag'
+    parser.add_argument("dir_pc", help="Directory containing tree point cloud .ply files")
+    parser.add_argument("dir_mesh", help="Directory containing tree mesh .ply files")
+    parser.add_argument("treefiles_dataframe", help="Path to treefiles dataframe CSV")
 
-    # df = pd.read_csv(treefiles_dataframe)
-    # print('tree indices to fix:', df.loc[df['selection'] == 'fix', 'id'].values)
+    parser.add_argument("--selection", default="undecided", choices=["undecided", "fix", "reject", "tree", "understory", "snag"], help="Selection status to filter on (default: %(default)s)")
+    parser.add_argument("--bounds", nargs=4, type=float, metavar=("X_MIN", "X_MAX", "Y_MIN", "Y_MAX"), default=None, help="Optional spatial bounds: x_min x_max y_min y_max") #bounds are optional xoxo
+    parser.add_argument("--diam-min", type=float, default=0.0, help="Minimum diameter filter (default: %(default)s)")
 
-    visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_dataframe, selection=selection, bounds=bounds, diam_min=d_min)
+    args = parser.parse_args()
 
+    visualize_mesh_with_pc(dir_pc=args.dir_pc, dir_mesh=args.dir_mesh, treefiles_df_path=args.treefiles_dataframe, selection=args.selection, bounds=args.bounds, diam_min=args.diam_min)
