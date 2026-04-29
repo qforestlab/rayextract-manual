@@ -98,7 +98,7 @@ def read_rayextract_treefile(path):
     return parsed_dfs
 
 
-def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', terrain_path=None, bounds=None, diam_min=None, smooth_tree=True, params=None):
+def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, dir_treefile_out=None, df_out=None, selection='reject', terrain_path=None, bounds=None, diam_min=None, smooth_tree=True, params=None):
     """
     Args
         dir_pc: absolute path to directory with tree point clouds
@@ -113,6 +113,7 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
 
     Remarks
         This function calls raycloudtools bash commands, so they should be installed on your path
+        Does not overwrite original folders but creates new out paths.
     """
     # parameter dictionary with defaults
     if params is None:
@@ -126,13 +127,26 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
     distance_limit = params.get('distance_limit', 1)
 
     # Read tree dataframne
-    df = pd.read_csv(df_path)
+    df = pd.read_csv(df_path).copy()
+
+    if dir_mesh_out is None:
+        dir_mesh_out = dir_mesh.rstrip("/\\") + "_fixed"
+
+    if dir_treefile_out is None:
+        dir_treefile_out = dir_treefile.rstrip("/\\") + "_fixed"
+
+    if df_out is None:
+        base, ext = os.path.splitext(df_path)
+        df_out = base + "_fixed" + ext
+
+    os.makedirs(dir_mesh_out, exist_ok=True)
+    os.makedirs(dir_treefile_out, exist_ok=True)
 
     # Select only trees according to criterium
     df_filtered = df[(df['selection'] == selection)]
 
     # Filter on location
-    if bounds:
+    if bounds is not None:
         x_min, x_max, y_min, y_max = bounds
         df_filtered = df_filtered[
             (df_filtered['x'] > x_min) & 
@@ -220,8 +234,8 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
                 mesh_new_smooth_decimated_path = treefile_new_smooth_decimated_path[:-4] + '_mesh.ply'
 
                 # Replace old mesh and treefile with new smoothed ones
-                shutil.move(treefile_new_smooth_decimated_path, treefile_path) # move new treefile to directory
-                shutil.move(mesh_new_smooth_decimated_path, mesh_path) # move new mesh to directory
+                shutil.move(treefile_new_smooth_decimated_path, treefile_out_path)
+                shutil.move(mesh_new_smooth_decimated_path, mesh_out_path)
                 
                 # Remove intermidiates
                 os.remove(treefile_new_info_path)  
@@ -233,18 +247,20 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
 
             else:
                 # Replace old mesh and treefile with new ones
-                shutil.move(treefile_new_path, treefile_path)
-                shutil.move(mesh_new_path, mesh_path) # move new mesh to directory
+                shutil.move(treefile_new_path, treefile_out_path)
+                shutil.move(mesh_new_path, mesh_out_path) # move new mesh to directory
 
             # Update tree dataframe
-            df_tf = read_rayextract_treefile(treefile_path)
+            df_tf = read_rayextract_treefile(treefile_out_path)
             
             if isinstance(df_tf, list):
                 multiple_trees.append(treefile)
             else:
-                df.loc[(df['filename'] == treefile, 'x')] = df_tf['x'][0]
-                df.loc[(df['filename'] == treefile)]['y'] = df_tf['y'][0]
-                df.loc[(df['filename'] == treefile)]['d'] = df_tf['radius'][0] * 2
+                mask = df['filename'] == treefile
+
+                df.loc[mask, 'x'] = df_tf['x'].iloc[0]
+                df.loc[mask, 'y'] = df_tf['y'].iloc[0]
+                df.loc[mask, 'd'] = df_tf['radius'].iloc[0] * 2
 
         else:
             os.remove(pc_new_path) if os.path.exists(pc_new_path) else None
@@ -253,7 +269,11 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
 
             print('Rayextract failed for treefile:', treefile)
             continue
-
+    
+    df.to_csv(df_out, index=False)
+    print(f"Updated dataframe written to: {df_out}")
+    print(f"Fixed treefiles written to: {dir_treefile_out}")
+    print(f"Fixed meshes written to: {dir_mesh_out}")
     print('trees that led to multiple extracted trees:', multiple_trees)
               
 
