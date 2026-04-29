@@ -279,26 +279,50 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
 
 if __name__ == "__main__":
 
-    # Path to tree pointclouds and treefiles 
-    dir_pc = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_pointclouds/'
-    dir_treefile = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_treefiles/'
-    dir_mesh = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_meshes/'
-    df_path = '/Stor1/wouter/data/chile/FUR006/rayextract/treefiles_dataframe.csv'
-    # terrain_path = '/Stor1/wouter/data/chile/FUR005/rayextract/2025-01-10_FUR005_0.01m_70x70m_filtered_raycloud_denoised_decimated_mesh.ply'
-    terrain_path = None
+    import argparse
+    parser = argparse.ArgumentParser(description="Rerun Rayextract on selected trees")
 
-    bounds = None
-    diam_min = 0.0
-    selection = 'fix'
-    smooth_tree = True
+    # required inputs
+    parser.add_argument("dir_pc")
+    parser.add_argument("dir_mesh")
+    parser.add_argument("dir_treefile")
+    parser.add_argument("df_path")
+
+    # otpions
+    parser.add_argument("--selection", default="fix")
+    parser.add_argument("--bounds", nargs=4, type=float, default=None)
+    parser.add_argument("--diam-min", type=float, default=None)
+    parser.add_argument("--no-smooth", action="store_true")
+
+    # Editable arguments to fix qsm's
+    parser.add_argument("--gradient", type=float, default=0.2)
+    parser.add_argument("--max-diameter", type=float, default=0.9)
+    parser.add_argument("--crop-length", type=float, default=1.0)
+    parser.add_argument("--girth-height-ratio", type=float, default=0.12)
+    parser.add_argument("--gravity-factor", type=float, default=0.3)
+    parser.add_argument("--global-taper", type=float, default=0.024)
+    parser.add_argument("--distance-limit", type=float, default=1)
+
+    args = parser.parse_args()
+
     params = {
-        'gradient': 0.2,
-        'max_diameter': 1.5,
-        'crop_length': 0.15,
-        'girth_height_ratio': 0.1,
-        'gravity_factor': 0.3,
-        'global_taper': 0.024,
-        'distance_limit': 1,
+        "gradient": args.gradient,  
+        "max_diameter": args.max_diameter,
+        "crop_length": args.crop_length,
+        "girth_height_ratio": args.girth_height_ratio,
+        "gravity_factor": args.gravity_factor,
+        "global_taper": args.global_taper,
+        "distance_limit": args.distance_limit,
     }
 
-    rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection, terrain_path=terrain_path, bounds=None, diam_min=None, smooth_tree=smooth_tree, params=params)
+    rerun_bad_qsm(
+        dir_pc=args.dir_pc,
+        dir_mesh=args.dir_mesh,
+        dir_treefile=args.dir_treefile,
+        df_path=args.df_path,
+        selection=args.selection,
+        bounds=args.bounds,
+        diam_min=args.diam_min,
+        smooth_tree=not args.no_smooth,
+        params=params,
+    )
