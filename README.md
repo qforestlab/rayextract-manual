@@ -326,3 +326,15 @@ If you directly want to visualise the *treefile* (i.e. QSM) instead of the trian
 
 Once you are finished with quality control for all trees, you can copy the selected trees to a new directory with the script
 [copy_selected_trees.py](./scripts/copy_selected_trees.py).
+
+## Rerunning rayextract on non satisfactory QSM results
+After the quality control, you can use [rerun_bad_qsm.py](./scripts/rerun_bad_qsm.py) to mess around with parameters until the QSMs reach your needs.
+There are a few parameters you can adjust. The one that usually solves most issues is lowering the `--gradient` parameter in *rayextract terrain*, or providing the plot-level terrain mesh.
+
+Additionally, you can tweak some parameters in *rayextract trees*, with the most important ones being `max_diameter`, `girth_height_ratio`, `gravity_factor`, `global_taper`, and `distance_limit`.
+
+The parameters are default set to the raycloudtools default value but can easily be changed to the desired values by adding them as arguments (e.g. `--gradient 0.15`).
+
+
+
+
