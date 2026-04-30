@@ -33,6 +33,7 @@ def find_matching_file(directory, tree_id, required_parts=None, extension=None):
 
     return matches[0]
 
+
 def read_rayextract_treefile(path):
     """Read a rayextract treefile.
 
@@ -98,7 +99,7 @@ def read_rayextract_treefile(path):
     return parsed_dfs
 
 
-def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, dir_treefile_out=None, df_out=None, selection='reject', terrain_path=None, bounds=None, diam_min=None, smooth_tree=True, params=None):
+def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='fix', terrain_path=None, bounds=None, diam_min=None, smooth_tree=False, params=None):
     """
     Args
         dir_pc: absolute path to directory with tree point clouds
@@ -113,7 +114,6 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
 
     Remarks
         This function calls raycloudtools bash commands, so they should be installed on your path
-        Does not overwrite original folders but creates new out paths.
     """
     # parameter dictionary with defaults
     if params is None:
@@ -127,20 +127,7 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
     distance_limit = params.get('distance_limit', 1)
 
     # Read tree dataframne
-    df = pd.read_csv(df_path).copy()
-
-    if dir_mesh_out is None:
-        dir_mesh_out = dir_mesh.rstrip("/\\") + "_fixed"
-
-    if dir_treefile_out is None:
-        dir_treefile_out = dir_treefile.rstrip("/\\") + "_fixed"
-
-    if df_out is None:
-        base, ext = os.path.splitext(df_path)
-        df_out = base + "_fixed" + ext
-
-    os.makedirs(dir_mesh_out, exist_ok=True)
-    os.makedirs(dir_treefile_out, exist_ok=True)
+    df = pd.read_csv(df_path)
 
     # Select only trees according to criterium
     df_filtered = df[(df['selection'] == selection)]
@@ -156,7 +143,7 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
         ]
 
     # Filter on minimum diameter
-    if diam_min:
+    if diam_min is not None:
         df_filtered = df_filtered[(df_filtered['d'] > diam_min)]
 
     print('number of trees to go:', df_filtered.shape[0])
@@ -168,14 +155,13 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
     for _, df_row in df_filtered.iterrows():
         treefile = df_row['filename']
         tree_id = df_row['id']
-
         pc_file = find_matching_file(dir_pc, tree_id, required_parts=["segmented"], extension=".ply")
         mesh_file = find_matching_file(dir_mesh, tree_id, required_parts=["mesh"], extension=".ply")
 
+        treefile_path = os.path.join(dir_treefile, treefile)
         pc_path = os.path.join(dir_pc, pc_file)
-        treefile_out_path = os.path.join(dir_treefile_out, treefile)
-        mesh_out_path = os.path.join(dir_mesh_out, mesh_file)
-        
+        mesh_path = os.path.join(dir_mesh, mesh_file)
+
         # Run rayextract terrain
         if terrain_path is None:
             subprocess.run(["rayextract", "terrain", pc_path, "--gradient", str(gradient)])
@@ -208,11 +194,6 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
             os.remove(terr_path) 
 
         if os.path.exists(mesh_new_path) and os.path.exists(pc_new_path) and os.path.exists(treefile_new_path): # if rayextract succeeded (and made a tree), then continue
-            # Remove old treefile and mesh
-            if os.path.exists(treefile_path):
-                os.remove(treefile_path)
-            if os.path.exists(mesh_path):
-                os.remove(mesh_path)
             # Remove new segmented pc
             os.remove(pc_new_path)
 
@@ -234,9 +215,9 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
                 mesh_new_smooth_decimated_path = treefile_new_smooth_decimated_path[:-4] + '_mesh.ply'
 
                 # Replace old mesh and treefile with new smoothed ones
-                shutil.move(treefile_new_smooth_decimated_path, treefile_out_path)
-                shutil.move(mesh_new_smooth_decimated_path, mesh_out_path)
-                
+                shutil.move(treefile_new_smooth_decimated_path, treefile_path)
+                shutil.move(mesh_new_smooth_decimated_path, mesh_path)
+
                 # Remove intermidiates
                 os.remove(treefile_new_info_path)  
                 os.remove(treefile_new_info_foliage_path)  
@@ -247,11 +228,11 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
 
             else:
                 # Replace old mesh and treefile with new ones
-                shutil.move(treefile_new_path, treefile_out_path)
-                shutil.move(mesh_new_path, mesh_out_path) # move new mesh to directory
+                shutil.move(treefile_new_path, treefile_path)
+                shutil.move(mesh_new_path, mesh_path) # move new mesh to directory
 
             # Update tree dataframe
-            df_tf = read_rayextract_treefile(treefile_out_path)
+            df_tf = read_rayextract_treefile(treefile_path)
             
             if isinstance(df_tf, list):
                 multiple_trees.append(treefile)
@@ -269,11 +250,8 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, dir_mesh_out=None, di
 
             print('Rayextract failed for treefile:', treefile)
             continue
-    
+
     df.to_csv(df_out, index=False)
-    print(f"Updated dataframe written to: {df_out}")
-    print(f"Fixed treefiles written to: {dir_treefile_out}")
-    print(f"Fixed meshes written to: {dir_mesh_out}")
     print('trees that led to multiple extracted trees:', multiple_trees)
               
 
@@ -292,7 +270,7 @@ if __name__ == "__main__":
     parser.add_argument("--selection", default="fix")
     parser.add_argument("--bounds", nargs=4, type=float, default=None)
     parser.add_argument("--diam-min", type=float, default=None)
-    parser.add_argument("--smooth", action="store_true") # when --smoooth is added as an arg it will become true and if loop will happen in function
+    parser.add_argument("--smooth", action="store_true")
 
     # Editable arguments to fix qsm's
     parser.add_argument("--gradient", type=float, default=0.2)
