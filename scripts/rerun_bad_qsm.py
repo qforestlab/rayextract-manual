@@ -12,6 +12,28 @@ import os
 import subprocess
 import shutil
 
+#function to find matching parts in filename, so it works for any filename structure
+def find_matching_file(directory, tree_id, required_parts=None, extension=None):
+    required_parts = required_parts or []
+
+    matches = []
+    for filename in os.listdir(directory):
+        if extension is not None and not filename.endswith(extension):
+            continue
+        if not filename.startswith(tree_id):
+            continue
+        if all(part in filename for part in required_parts):
+            matches.append(filename)
+
+    if len(matches) == 0:
+        raise FileNotFoundError(f"No file found in {directory} for tree_id={tree_id}, required_parts={required_parts}")
+
+    if len(matches) > 1:
+        raise ValueError(f"Multiple files found in {directory} for tree_id={tree_id}, required_parts={required_parts}: {matches}")
+
+    return matches[0]
+
+
 def read_rayextract_treefile(path):
     """Read a rayextract treefile.
 
@@ -77,7 +99,7 @@ def read_rayextract_treefile(path):
     return parsed_dfs
 
 
-def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', terrain_path=None, bounds=None, diam_min=None, smooth_tree=True, params=None):
+def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='fix', terrain_path=None, bounds=None, diam_min=None, smooth_tree=False, params=None):
     """
     Args
         dir_pc: absolute path to directory with tree point clouds
@@ -111,7 +133,7 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
     df_filtered = df[(df['selection'] == selection)]
 
     # Filter on location
-    if bounds:
+    if bounds is not None:
         x_min, x_max, y_min, y_max = bounds
         df_filtered = df_filtered[
             (df_filtered['x'] > x_min) & 
@@ -121,7 +143,7 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
         ]
 
     # Filter on minimum diameter
-    if diam_min:
+    if diam_min is not None:
         df_filtered = df_filtered[(df_filtered['d'] > diam_min)]
 
     print('number of trees to go:', df_filtered.shape[0])
@@ -132,16 +154,14 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
     # Loop over all treefiles
     for _, df_row in df_filtered.iterrows():
         treefile = df_row['filename']
-        treefile_path = os.path.join(dir_treefile, treefile)
+        tree_id = df_row['id']
+        pc_file = find_matching_file(dir_pc, tree_id, required_parts=["segmented"], extension=".ply")
+        mesh_file = find_matching_file(dir_mesh, tree_id, required_parts=["mesh"], extension=".ply")
 
-        # Get corresponding pointcloud and mesh file
-        if 'treefiles' in treefile:
-            pc_file = treefile.replace('treefiles', 'segmented').replace('txt', 'ply')
-        elif 'treefile' in treefile:
-            pc_file = treefile.replace('treefile', 'segmented').replace('txt', 'ply')
+        treefile_path = os.path.join(dir_treefile, treefile)
         pc_path = os.path.join(dir_pc, pc_file)
-        mesh_path = os.path.join(dir_mesh, treefile.replace('.txt', '_mesh.ply'))
-        
+        mesh_path = os.path.join(dir_mesh, mesh_file)
+
         # Run rayextract terrain
         if terrain_path is None:
             subprocess.run(["rayextract", "terrain", pc_path, "--gradient", str(gradient)])
@@ -174,11 +194,6 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
             os.remove(terr_path) 
 
         if os.path.exists(mesh_new_path) and os.path.exists(pc_new_path) and os.path.exists(treefile_new_path): # if rayextract succeeded (and made a tree), then continue
-            # Remove old treefile and mesh
-            if os.path.exists(treefile_path):
-                os.remove(treefile_path)
-            if os.path.exists(mesh_path):
-                os.remove(mesh_path)
             # Remove new segmented pc
             os.remove(pc_new_path)
 
@@ -200,9 +215,9 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
                 mesh_new_smooth_decimated_path = treefile_new_smooth_decimated_path[:-4] + '_mesh.ply'
 
                 # Replace old mesh and treefile with new smoothed ones
-                shutil.move(treefile_new_smooth_decimated_path, treefile_path) # move new treefile to directory
-                shutil.move(mesh_new_smooth_decimated_path, mesh_path) # move new mesh to directory
-                
+                shutil.move(treefile_new_smooth_decimated_path, treefile_path)
+                shutil.move(mesh_new_smooth_decimated_path, mesh_path)
+
                 # Remove intermidiates
                 os.remove(treefile_new_info_path)  
                 os.remove(treefile_new_info_foliage_path)  
@@ -222,9 +237,11 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
             if isinstance(df_tf, list):
                 multiple_trees.append(treefile)
             else:
-                df.loc[(df['filename'] == treefile, 'x')] = df_tf['x'][0]
-                df.loc[(df['filename'] == treefile)]['y'] = df_tf['y'][0]
-                df.loc[(df['filename'] == treefile)]['d'] = df_tf['radius'][0] * 2
+                mask = df['filename'] == treefile
+
+                df.loc[mask, 'x'] = df_tf['x'].iloc[0]
+                df.loc[mask, 'y'] = df_tf['y'].iloc[0]
+                df.loc[mask, 'd'] = df_tf['radius'].iloc[0] * 2
 
         else:
             os.remove(pc_new_path) if os.path.exists(pc_new_path) else None
@@ -234,31 +251,56 @@ def rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection='reject', t
             print('Rayextract failed for treefile:', treefile)
             continue
 
+    df.to_csv(df_out, index=False)
     print('trees that led to multiple extracted trees:', multiple_trees)
               
 
 if __name__ == "__main__":
 
-    # Path to tree pointclouds and treefiles 
-    dir_pc = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_pointclouds/'
-    dir_treefile = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_treefiles/'
-    dir_mesh = '/Stor1/wouter/data/chile/FUR006/rayextract/tree_meshes/'
-    df_path = '/Stor1/wouter/data/chile/FUR006/rayextract/treefiles_dataframe.csv'
-    # terrain_path = '/Stor1/wouter/data/chile/FUR005/rayextract/2025-01-10_FUR005_0.01m_70x70m_filtered_raycloud_denoised_decimated_mesh.ply'
-    terrain_path = None
+    import argparse
+    parser = argparse.ArgumentParser(description="Rerun Rayextract on selected trees")
 
-    bounds = None
-    diam_min = 0.0
-    selection = 'fix'
-    smooth_tree = True
+    # required inputs
+    parser.add_argument("dir_pc")
+    parser.add_argument("dir_mesh")
+    parser.add_argument("dir_treefile")
+    parser.add_argument("df_path")
+
+    # otpions
+    parser.add_argument("--selection", default="fix")
+    parser.add_argument("--bounds", nargs=4, type=float, default=None)
+    parser.add_argument("--diam-min", type=float, default=None)
+    parser.add_argument("--smooth", action="store_true")
+
+    # Editable arguments to fix qsm's
+    parser.add_argument("--gradient", type=float, default=0.2)
+    parser.add_argument("--max-diameter", type=float, default=0.9)
+    parser.add_argument("--crop-length", type=float, default=1.0)
+    parser.add_argument("--girth-height-ratio", type=float, default=0.12)
+    parser.add_argument("--gravity-factor", type=float, default=0.3)
+    parser.add_argument("--global-taper", type=float, default=0.024)
+    parser.add_argument("--distance-limit", type=float, default=1)
+
+    args = parser.parse_args()
+
     params = {
-        'gradient': 0.2,
-        'max_diameter': 1.5,
-        'crop_length': 0.15,
-        'girth_height_ratio': 0.1,
-        'gravity_factor': 0.3,
-        'global_taper': 0.024,
-        'distance_limit': 1,
+        "gradient": args.gradient,  
+        "max_diameter": args.max_diameter,
+        "crop_length": args.crop_length,
+        "girth_height_ratio": args.girth_height_ratio,
+        "gravity_factor": args.gravity_factor,
+        "global_taper": args.global_taper,
+        "distance_limit": args.distance_limit,
     }
 
-    rerun_bad_qsm(dir_pc, dir_mesh, dir_treefile, df_path, selection, terrain_path=terrain_path, bounds=None, diam_min=None, smooth_tree=smooth_tree, params=params)
+    rerun_bad_qsm(
+        dir_pc=args.dir_pc,
+        dir_mesh=args.dir_mesh,
+        dir_treefile=args.dir_treefile,
+        df_path=args.df_path,
+        selection=args.selection,
+        bounds=args.bounds,
+        diam_min=args.diam_min,
+        smooth_tree= args.smooth,
+        params=params,
+    )

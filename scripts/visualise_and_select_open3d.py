@@ -3,6 +3,25 @@ import numpy as np
 import pandas as pd
 import os
 
+def find_matching_file(directory, tree_id, required_parts=None, extension=".ply"):
+    required_parts = required_parts or []
+
+    matches = []
+    for filename in os.listdir(directory):
+        if not filename.endswith(extension):
+            continue
+        if not filename.startswith(tree_id):
+            continue
+        if all(part in filename for part in required_parts):
+            matches.append(filename)
+
+    if len(matches) == 0:
+        raise FileNotFoundError(f"No file found in {directory} for tree_id={tree_id}, required_parts={required_parts}")
+
+    if len(matches) > 1:
+        raise ValueError(f"Multiple files found in {directory} for tree_id={tree_id}, required_parts={required_parts}: {matches}")
+
+    return matches[0]
 
 class Toggle:
     def __init__(self, geom, visible=True):
@@ -78,7 +97,7 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
     df_filtered = df[(df['selection'] == selection)]
 
     # Filter on location
-    if bounds:
+    if bounds is not None:
         x_min, x_max, y_min, y_max = bounds
         df_filtered = df_filtered[
             (df_filtered['x'] > x_min) & 
@@ -96,14 +115,10 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
     # Loop over all treefiles
     for _, df_row in df_filtered.iterrows():
         treefile = df_row['filename']
+        tree_id = df_row['id']
 
-        # Get corresponding pointcloud and mesh file
-        if 'treefiles' in treefile:
-            pc_file = treefile.replace('treefiles', 'segmented').replace('txt', 'ply')
-        elif 'treefile' in treefile:
-            pc_file = treefile.replace('treefile', 'segmented').replace('txt', 'ply')
-        
-        mesh_file = treefile.replace('.txt', '_mesh.ply')
+        pc_file = find_matching_file(dir_pc, tree_id, required_parts=["segmented"])
+        mesh_file = find_matching_file(dir_mesh, tree_id, required_parts=["mesh"])
 
         # Read point cloud
         if os.path.exists(os.path.join(dir_pc, pc_file)):
@@ -123,11 +138,24 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
 
         # Compute height of the point cloud
         points = np.asarray(pcd.points)
-        height = points[:, 2].max() - points[:, 2].min()
-        width_x = points[:, 0].max() - points[:, 0].min()
-        width_y = points[:, 1].max() - points[:, 1].min()
+        p2 = points[:,2].min()
+        p1 = points[:,1].min()
+        p0 = points[:,0].min()
+        height = points[:, 2].max() - p2
+        width_x = points[:, 0].max() - p0
+        width_y = points[:, 1].max() - p1
         print(f"Height of point cloud: {height:.2f} m")
         print(f"diameter: {df_row['d']:.2f} m")
+        #Translate pcd
+        points[:,2] -= p2
+        points[:,1] -= p1
+        points[:,0] -= p0
+
+        #Translate mesh
+        vertices = np.asarray(mesh.vertices)
+        vertices[:,2] -= p2
+        vertices[:,1] -= p1
+        vertices[:,0] -= p0
 
         # Print potential current selection state
         print('current decision:', df[df['filename'] == treefile]['selection'].values[0])
@@ -185,18 +213,17 @@ def visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_df_path, selection='undec
 
 if __name__ == "__main__":
 
-    # Path to tree pointclouds and treefiles 
-    dir_pc = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_pointclouds/'
-    dir_tf = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_treefiles/'
-    dir_mesh = '/Stor1/wouter/data/chile/FUR002/rayextract/tree_meshes/'
-    treefiles_dataframe = '/Stor1/wouter/data/chile/FUR002/rayextract/treefiles_dataframe.csv'
+    import argparse
+    parser = argparse.ArgumentParser(description="Visualize tree point clouds and meshes, and update tree selection labels.")
 
-    bounds = (10, 60, 10, 60)
-    d_min = 0.0
-    selection = 'undecided'  # 'undecided', 'fix', 'reject', 'tree', 'understory', 'snag'
+    parser.add_argument("dir_pc", help="Directory containing tree point cloud .ply files")
+    parser.add_argument("dir_mesh", help="Directory containing tree mesh .ply files")
+    parser.add_argument("treefiles_dataframe", help="Path to treefiles dataframe CSV")
 
-    # df = pd.read_csv(treefiles_dataframe)
-    # print('tree indices to fix:', df.loc[df['selection'] == 'fix', 'id'].values)
+    parser.add_argument("--selection", default="undecided", choices=["undecided", "fix", "reject", "tree", "understory", "snag"], help="Selection status to filter on (default: %(default)s)")
+    parser.add_argument("--bounds", nargs=4, type=float, metavar=("X_MIN", "X_MAX", "Y_MIN", "Y_MAX"), default=None, help="Optional spatial bounds: x_min x_max y_min y_max") #bounds are optional xoxo
+    parser.add_argument("--diam-min", type=float, default=0.0, help="Minimum diameter filter (default: %(default)s)")
 
-    visualize_mesh_with_pc(dir_pc, dir_mesh, treefiles_dataframe, selection=selection, bounds=bounds, diam_min=d_min)
+    args = parser.parse_args()
 
+    visualize_mesh_with_pc(dir_pc=args.dir_pc, dir_mesh=args.dir_mesh, treefiles_df_path=args.treefiles_dataframe, selection=args.selection, bounds=args.bounds, diam_min=args.diam_min)
