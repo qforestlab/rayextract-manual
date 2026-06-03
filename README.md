@@ -31,7 +31,7 @@ See [installation.md](./installation.md) for installation instructions.
 
 ### What can you do
 - Tree **instance segmentation** of forest plot point clouds.
-- Build **QSMs** simultaniously for the whole forest or for a single tree point cloud.
+- Build **QSMs** simultaneously for the whole forest or for a single tree point cloud.
 - Convert the connected cylinder representation (=QSM) to a **triangular tree mesh**.
 - **Ground mesh** (DEM) fitting for the forest plot point cloud.
 - Leaf wood segmentation of tree point clouds
@@ -42,8 +42,8 @@ RCT is relatively easy to set up, computationally fast, and currently state-of-t
 
 ### Limitations
 
-- Rayextract can fail to reconstruct a tree with sometimes no options to fix this (limited user definable parameters and not stochastic).
-- Rayextract is made for plot level point point clouds and not for single tree point clouds. You can run it on a single tree but since there's no way of inputting that it's a single tree it might segment it into multiple trees.
+- Rayextract can fail to reconstruct a tree with sometimes no options to fix this (limited user-definable parameters and not stochastic).
+- Rayextract is made for plot-level point clouds and not for single tree point clouds. You can run it on a single tree but since there's no way of inputting that it's a single tree it might segment it into multiple trees.
 - It doesn't work well for trees with buttresses. 
 
 ## First steps
@@ -85,11 +85,10 @@ Use the following command to convert your point cloud file to the correct format
 rayimport <pcd.ply> ray 0,0,-1 --max_intensity 0
 ```
 
-- `<pdc.ply>`: replace with your point cloud
-- `ray 0,0,-0.1`: use 0,0,-0.1 as the constant ray vector from start to point (stored in the normal field)
+- `<pcd.ply>`: replace with your point cloud
+- `ray 0,0,-1`: use 0,0,-1 as the constant ray vector from start to point (stored in the normal field)
 - `--max_intensity 0`: set all rays to be bounded (having an end point)
-- `--remove_start_pos` (optional): This will subtract the start position of the pointcloud such that the left bottom corner has coordinates 0,0,0. This is optional, but recommended if your pointcloud has large values (leading to potential precision overflow errors), for example when working with global coordinates. However, we recommend translating and rotating you pointcloud prior to using rayextract (keep track of your transformation matrices!).
-
+- `--remove_start_pos` (optional): This will subtract the start position of the point cloud such that the left bottom corner has coordinates 0,0,0. This is optional, but recommended if your point cloud has large values (leading to potential precision overflow errors), for example when working with global coordinates. However, we recommend translating and rotating your point cloud prior to using rayextract (keep track of your transformation matrices!).
 
 The output will be a file called `pcd_raycloud.ply` (original point cloud name + *_raycloud* suffix) saved to your working directory. 
 
@@ -109,7 +108,7 @@ The output is a file called `pcd_raycloud_mesh.ply` (imported point cloud + *_me
 
 ### *rayextract trees*: Extract individual trees and build QSMs from point cloud
 
-How it works: the tree extraction algorithm takes as input (1) our original point cloud and (2) the extracted terrain mesh from the previous step. The terrain mesh will be uses as seed points to simultaniously build a shortest path graph through all the tree points, using some heuristics to guide the connectivity. Hence, it combines tree instance segmentation, leaf-wood segmentation and cylinder skeleton fitting (i.e., QSM). For more information see [Devereux et al (2026)](https://www.sciencedirect.com/science/article/pii/S0034425725005668?via%3Dihub).
+How it works: the tree extraction algorithm takes as input (1) our original point cloud and (2) the extracted terrain mesh from the previous step. The terrain mesh will be used as seed points to simultaneously build a shortest path graph through all the tree points, using some heuristics to guide the connectivity. Hence, it combines tree instance segmentation, leaf-wood segmentation and cylinder skeleton fitting (i.e., QSM). For more information see [Devereux et al (2026)](https://www.sciencedirect.com/science/article/pii/S0034425725005668?via%3Dihub).
 
 Run the following command:
 
@@ -233,7 +232,7 @@ The output will be a new directory (`<directory>_rayextract`) with five subdirec
 5. `trees_segmented_files`: segmented tree point clouds outputted by `rayextract trees`
 
 
-**Important:** Since `rayextract trees` is made to operate on forest plot point clouds, it is possible that when running it on a single tree point cloud it can segment it into multiple instances. At the moment, there is unfortunatelly no option to let rayextract know that you're inputting a single tree. You should therefore check in the output that there is only a single line in the *_trees.txt* or that there is only a single color in the *_segmented.ply* files.  
+**Important:** Since `rayextract trees` is made to operate on forest plot point clouds, it is possible that when running it on a single tree point cloud it can segment it into multiple instances. At the moment, there is unfortunately no option to let rayextract know that you're inputting a single tree. You should therefore check in the output that there is only a single line in the *_trees.txt* or that there is only a single color in the *_segmented.ply* files.  
 
 Cases where rayextract may segment your individual tree point cloud into multiple instances:
 - Stem base points are noisy: the extracted terrain mesh may be very steep and large, hence extending to higher branches. Potential fix: (1) manually clean your base stem points, (2) use a plot level terrain mesh if available, (3) change the `--gradient` parameter in `rayextract terrain` to a lower value.
@@ -284,7 +283,7 @@ raysplit <pcd_raycloud.ply> <pcd_raycloud_trees.txt> distance <distance>
 ```
 - `<pcd_raycloud.ply>`: replace with your point cloud (in RCT format)
 - `<pcd_raycloud_trees.txt>`: replace with the extracted treefile (or correponding mesh file), which is the output from [rayextract trees](#rayextract-trees-extract-individual-trees-and-build-qsms-from-point-cloud).
-- `<distance>`: replace with a distance value from the woody mesh. All points further away than this distamce will be considered leaf points.
+- `<distance>`: replace with a distance value from the woody mesh. All points further away than this distance will be considered leaf points.
 
 The output will be two files: `pcd_raycloud_inside.ply` (woody points) and `pcd_raycloud_outside.ply` (leaf points)
 
